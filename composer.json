@@ -3,7 +3,9 @@
     "description": "Connect any printer to your application with PrintNode Client and easy to use JSON API",
     "require": {
         "php": ">=7.3.11",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ext-ctype": "*",
+        "ext-json": "*"
     },
     "keywords": [
         "php",

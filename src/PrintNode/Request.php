@@ -2,6 +2,11 @@
 
 namespace PrintNode;
 
+use BadMethodCallException;
+use Exception;
+use InvalidArgumentException;
+use RuntimeException;
+
 /**
  * Request
  *
@@ -80,12 +85,11 @@ class Request
      * @param mixed $methodNameEntityMap
      * @param int $offset
      * @param int $limit
-     * @return Request
      */
     public function __construct(Credentials $credentials, array $endPointUrls = array(), array $methodNameEntityMap = array(), $offset = 0, $limit = 10)
     {
         if (!function_exists('curl_init')) {
-            throw new \RuntimeException('Function curl_init does not exist.');
+            throw new RuntimeException('Function curl_init does not exist.');
         }
 
         $this->credentials = $credentials;
@@ -107,22 +111,24 @@ class Request
 
     /**
      * Get API EndPoint URL from an entity name
-     * @param mixed $entityName
-     * @return string
      */
     private function makeEndPointUrls()
     {
-        $endPointUrls;
+        $endPointUrls = [];
         foreach ($this->methodNameEntityMap as $classes) {
             $endPointUrls[$classes] = $this->apiurl.$this->endPointUrls[$classes];
         }
         $this->endPointUrls = $endPointUrls;
     }
 
-    private function getEndPointUrl($entityName)
+    /**
+     * @param $entityName
+     * @return mixed|string
+     */
+    private function getEndPointUrl($entityName): string
     {
         if (!isset($this->endPointUrls[$entityName])) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Missing endPointUrl for entityName "%s"',
                     $entityName
@@ -138,10 +144,10 @@ class Request
      * @param mixed $methodName
      * @return string
      */
-    private function getEntityName($methodName)
+    private function getEntityName($methodName): string
     {
         if (!preg_match('/^get(.+)$/', $methodName, $matchesArray)) {
-            throw new \BadMethodCallException(
+            throw new BadMethodCallException(
                 sprintf(
                     'Method %s::%s does not exist',
                     get_class($this),
@@ -151,7 +157,7 @@ class Request
         }
 
         if (!isset($this->methodNameEntityMap[$matchesArray[1]])) {
-            throw new \BadMethodCallException(
+            throw new BadMethodCallException(
                 sprintf(
                     '%s is missing an methodNameMap entry for %s',
                     get_class($this),
@@ -197,12 +203,12 @@ class Request
      * @param mixed $endPointUrl
      * @return Response
      */
-    private function curlExec($curlHandle, $endPointUrl)
+    private function curlExec($curlHandle, $endPointUrl): Response
     {
         curl_setopt($curlHandle, CURLOPT_URL, $endPointUrl);
 
         if (($response = @curl_exec($curlHandle)) === false) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf(
                     'cURL Error (%d): %s',
                     curl_errno($curlHandle),
@@ -227,7 +233,7 @@ class Request
      * @param mixed $endPointUrl
      * @return Response
      */
-    private function curlGet($endPointUrl)
+    private function curlGet($endPointUrl): Response
     {
         $curlHandle = $this->curlInit();
         curl_setopt($curlHandle, CURLOPT_HTTPHEADER, $this->childauth);
@@ -238,7 +244,7 @@ class Request
         );
     }
 
-    private function curlDelete($endPointUrl)
+    private function curlDelete($endPointUrl): Response
     {
         $curlHandle = $this->curlInit();
 
@@ -252,41 +258,11 @@ class Request
     }
 
     /**
-     * Apply offset and limit to a end point URL.
-     * @param mixed $endPointUrl
-     * @return string
-     */
-    private function applyOffsetLimit($endPointUrl)
-    {
-        $endPointUrlArray = parse_url($endPointUrl);
-
-        if (!isset($endPointUrlArray['query'])) {
-            $endPointUrlArray['query'] = null;
-        }
-
-        parse_str($endPointUrlArray['query'], $queryStringArray);
-
-        $queryStringArray['offset'] = $this->offset;
-        $queryStringArray['limit'] = min(max(1, $this->limit), 500);
-
-        $endPointUrlArray['query'] = http_build_query($queryStringArray, null, '&');
-
-        $endPointUrl = (isset($endPointUrlArray['scheme'])) ? "{$endPointUrlArray['scheme']}://" : '';
-        $endPointUrl.= (isset($endPointUrlArray['host'])) ? "{$endPointUrlArray['host']}" : '';
-        $endPointUrl.= (isset($endPointUrlArray['port'])) ? ":{$endPointUrlArray['port']}" : '';
-        $endPointUrl.= (isset($endPointUrlArray['path'])) ? "{$endPointUrlArray['path']}" : '';
-        $endPointUrl.= (isset($endPointUrlArray['query'])) ? "?{$endPointUrlArray['query']}" : '';
-
-        return $endPointUrl;
-    }
-
-    /**
      * Make a POST/PUT/DELETE request using cURL
-     * @param Entity $entity
-     * @param mixed $httpMethod
+     *
      * @return Response
      */
-    private function curlSend()
+    private function curlSend(): Response
     {
         $arguments = func_get_args();
 
@@ -314,7 +290,7 @@ class Request
     public function setOffset($offset)
     {
         if (!ctype_digit($offset) && !is_int($offset)) {
-            throw new \InvalidArgumentException('offset should be a number');
+            throw new InvalidArgumentException('offset should be a number');
         }
 
         $this->offset = $offset;
@@ -327,46 +303,34 @@ class Request
     public function setLimit($limit)
     {
         if (!ctype_digit($limit) && !is_int($limit)) {
-            throw new \InvalidArgumentException('limit should be a number');
+            throw new InvalidArgumentException('limit should be a number');
         }
 
         $this->limit = $limit;
     }
 
     /**
-     * Delete an ApiKey for a child account
-     * @param string $apikey
-     * @return Response
-     * */
-    public function deleteApiKey($apikey)
-    {
-        $endPointUrl = $this->apiurl."/account/apikey/".$apikey;
-
-        $response = $this->curlDelete($endPointUrl);
-
-        return $response;
-    }
-
-    /**
      * Delete a tag for a child account
+     *
      * @param string $tag
      * @return Response
-     * */
-    public function deleteTag($tag)
+     */
+    public function deleteTag(string $tag): Response
     {
         $endPointUrl = $this->apiurl."/account/tag/".$tag;
 
-        $response = $this->curlDelete($endPointUrl);
-
-        return $response;
+        return $this->curlDelete($endPointUrl);
     }
 
     /**
      * Delete a child account
      * MUST have $this->childauth set to run.
+     *
      * @return Response
-     * */
-    public function deleteAccount()
+     *
+     * @throws Exception
+     */
+    public function deleteAccount(): Response
     {
         if (!isset($this->childauth)) {
             throw new Exception(
@@ -378,33 +342,31 @@ class Request
 
         $endPointUrl = $this->apiurl."/account/";
 
-        $response = $this->curlDelete($endPointUrl);
-
-        return $response;
+        return $this->curlDelete($endPointUrl);
     }
 
     /**
      * Returns a client key.
+     *
      * @param string $uuid
      * @param string $edition
      * @param string $version
-     * @return Resposne
-     * */
-    public function getClientKey($uuid, $edition, $version)
+     * @return Response
+     */
+    public function getClientKey(string $uuid, string $edition, string $version): Response
     {
         $endPointUrl = $this->apiurl."/client/key/".$uuid."?edition=".$edition."&version=".$version;
 
-        $response = $this->curlGet($endPointUrl);
-
-        return $response;
+        return $this->curlGet($endPointUrl);
     }
 
     /**
      * Gets print job states.
-     * @param string $printjobId OPTIONAL:if unset gives states relative to all printjobs.
+     *
      * @return Entity[]
-     * */
-    public function getPrintJobStates()
+     * @throws HttpException
+     */
+    public function getPrintJobStates(): array
     {
         $arguments = func_get_args();
 
@@ -428,26 +390,20 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\State", json_decode($response->getContent()));
     }
 
-
     /**
      * Gets PrintJobs relative to a printer.
-     * @param string $printerIdSet set of printer ids to find PrintJobs relative to
-     * @param string $printJobId OPTIONAL: set of PrintJob ids relative to the printer.
+     *
      * @return Entity[]
-     * */
-    public function getPrintJobsByPrinters()
+     *
+     * @throws HttpException
+     */
+    public function getPrintJobsByPrinters(): array
     {
         $arguments = func_get_args();
 
@@ -472,57 +428,24 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\PrintJob", json_decode($response->getContent()));
     }
 
     /**
-     * Gets scales relative to a computer.
-     * @param string $computerId id of computer to find scales
-     * @return Entity[]
-     * */
-    public function getScales($computerId)
-    {
-        $endPointUrl = $this->apiurl."/computer/";
-        $endPointUrl.= $computerId;
-        $endPointUrl.= '/scales';
-
-        $response = $this->curlGet($endPointUrl);
-
-
-        if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
-        }
-
-        return Entity::makeFromResponse("PrintNode\Scale", json_decode($response->getContent()));
-    }
-
-    /**
      * Get printers relative to a computer.
-     * @param string $computerIdSet set of computer ids to find printers relative to
-     * @param string $printerIdSet OPTIONAL: set of printer ids only found in the set of computers.
+     *
      * @return Entity[]
-     * */
-    public function getPrintersByComputers()
+     * @throws HttpException
+     */
+    public function getPrintersByComputers(): array
     {
         $arguments = func_get_args();
 
         if (count($arguments) > 2) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Too many arguments given to getPrintersByComputers.'
                 )
@@ -542,13 +465,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\Printer", json_decode($response->getContent()));
@@ -556,11 +473,13 @@ class Request
 
     /**
      * Map method names getComputers, getPrinters and getPrintJobs to entities
+     *
      * @param mixed $methodName
      * @param mixed $arguments
      * @return Entity[]
+     * @throws HttpException
      */
-    public function __call($methodName, $arguments)
+    public function __call($methodName, $arguments): array
     {
         $entityName = $this->getEntityName($methodName);
 
@@ -570,7 +489,7 @@ class Request
             $arguments = array_shift($arguments);
 
             if (!is_string($arguments)) {
-                throw new \InvalidArgumentException(
+                throw new InvalidArgumentException(
                     sprintf(
                         'Invalid argument type passed to %s. Expecting a string got %s',
                         $methodName,
@@ -594,13 +513,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse($entityName, json_decode($response->getContent()));
@@ -611,10 +524,10 @@ class Request
      * @param Entity $entity
      * @return Response
      * */
-    public function patch(Entity $entity)
+    public function patch(Entity $entity): Response
     {
         if (!($entity instanceof Entity)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Invalid argument type passed to patch. Expecting Entity got %s',
                     gettype($entity)
@@ -641,10 +554,10 @@ class Request
      * @param Entity $entity
      * @return Response
      */
-    public function post(Entity $entity)
+    public function post(Entity $entity): Response
     {
         if (!($entity instanceof Entity)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'Invalid argument type passed to patch. Expecting Entity got %s',
                     gettype($entity)
@@ -666,40 +579,11 @@ class Request
     }
 
     /**
-     * PUT (update) the specified entity
-     * @param Entity $entity
-     * @return Response
-     */
-    public function put()
-    {
-        $arguments = func_get_args();
-
-        $entity = array_shift($arguments);
-
-        if (!($entity instanceof Entity)) {
-            throw new \InvalidArgumentException(
-                sprintf(
-                    'Invalid argument type passed to patch. Expecting Entity got %s',
-                    gettype($entity)
-                )
-            );
-        }
-
-        $endPointUrl = $this->getEndPointUrl(get_class($entity));
-
-        foreach ($arguments as $argument) {
-            $endPointUrl.= '/'.$argument;
-        }
-
-        return $this->curlSend('PUT', $entity, $endPointUrl);
-    }
-
-    /**
      * DELETE (delete) the specified entity
      * @param Entity $entity
      * @return Response
      */
-    public function delete(Entity $entity)
+    public function delete(Entity $entity): Response
     {
         $endPointUrl = $this->getEndPointUrl(get_class($entity));
 
@@ -718,10 +602,5 @@ class Request
     public function setChildAccountByEmail($email)
     {
         $this->childauth = array("X-Child-Account-By-Email: ".$email);
-    }
-
-    public function setChildAccountByCreatorRef($creatorRef)
-    {
-        $this->childauth = array("X-Child-Account-By-CreatorRef: ".$creatorRef);
     }
 }
