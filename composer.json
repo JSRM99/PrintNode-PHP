@@ -1,8 +1,8 @@
 {
-    "name": "printnode/printnode-php",
+    "name": "jsrm99/printnode-php",
     "description": "Connect any printer to your application with PrintNode Client and easy to use JSON API",
     "require": {
-        "php": ">=5.3.2",
+        "php": ">=7.3.11",
         "ext-curl": "*"
     },
     "keywords": [
@@ -11,12 +11,19 @@
         "API",
         "printing"
     ],
-    "homepage": "https://github.com/PrintNode/PrintNode-PHP",
-    "authors": [{
-        "email":    "support@printnode.com",
-        "name":     "Contributors",
-        "homepage": "https://www.printnode.com"
-    }],
+    "homepage": "https://github.com/JSRM99/PrintNode-PHP",
+    "authors": [
+        {
+            "name": "Juup Schram",
+            "homepage": "https://github.com/JSRM99",
+            "role": "Developer"
+        },
+        {
+            "email": "support@printnode.com",
+            "name": "Contributors",
+            "homepage": "https://www.printnode.com"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "PrintNode\\": "src/PrintNode"
