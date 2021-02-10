@@ -428,13 +428,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\State", json_decode($response->getContent()));
@@ -472,13 +466,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\PrintJob", json_decode($response->getContent()));
@@ -499,13 +487,7 @@ class Request
 
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\Scale", json_decode($response->getContent()));
@@ -542,13 +524,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse("PrintNode\Printer", json_decode($response->getContent()));
@@ -594,13 +570,7 @@ class Request
         $response = $this->curlGet($endPointUrl);
 
         if ($response->getStatusCode() != '200') {
-            throw new \RuntimeException(
-                sprintf(
-                    'HTTP Error (%d): %s',
-                    $response->getStatusCode(),
-                    $response->getStatusMessage()
-                )
-            );
+            throw new HttpException($response);
         }
 
         return Entity::makeFromResponse($entityName, json_decode($response->getContent()));
