@@ -2,7 +2,7 @@
     "name": "jsrm99/printnode-php",
     "description": "Connect any printer to your application with PrintNode Client and easy to use JSON API",
     "require": {
-        "php": ">=7.3.11",
+        "php": ">=7.1.0",
         "ext-curl": "*",
         "ext-ctype": "*",
         "ext-json": "*"
